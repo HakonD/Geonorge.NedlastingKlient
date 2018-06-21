@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -35,14 +35,17 @@ namespace Geonorge.Nedlaster
                 {
                     using (var contentStream = await response.Content.ReadAsStreamAsync())
                     {
+<<<<<<< HEAD
                         destinationFilePath = downloadRequest.GetDestinationFileName(response);
                         var totalBytes = response.Content.Headers.ContentLength;
                         await ProcessContentStream(totalBytes, contentStream, destinationFilePath);
                     }
                 }
             }
+<<<<<<< HEAD
             return destinationFilePath;
         }
+
 
         private static void SetClientRequestHeaders(DownloadRequest downloadRequest, AppSettings appSettings)
         {

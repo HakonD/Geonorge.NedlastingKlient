@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Geonorge.MassivNedlasting;
 using System.Threading.Tasks;
+using Geonorge.MassivNedlasting;
 
 namespace Geonorge.Nedlaster
 {
@@ -13,19 +13,38 @@ namespace Geonorge.Nedlaster
         {
             Console.WriteLine("Geonorge - nedlaster");
             Console.WriteLine("--------------------");
+            DeleteOldLogs();
+            StartDownloadAsync().Wait();
+        }
 
+        private static void DeleteOldLogs()
+        {
+            string[] files = Directory.GetFiles(ApplicationService.GetLogAppDirectory().ToString());
+
+            foreach (string file in files)
+            {
+                FileInfo fi = new FileInfo(file);
+                if (fi.LastAccessTime < DateTime.Now.AddMonths(-1))
+                    fi.Delete();
+            }
+        }
+
+        private static async Task StartDownloadAsync()
+        {
             var datasetService = new DatasetService();
             List<DatasetFile> datasetToDownload = datasetService.GetSelectedFiles();
 
             List<DatasetFile> updatedDatasetToDownload = new List<DatasetFile>();
-            
-            // List to hold downloaded files with filename.
-            List<string> downloadlog = new List<string>();
-            downloadlog.Add("FileId;Filename;Updated");
+            DownloadLog downloadLog = new DownloadLog();
+            downloadLog.TotalDatasetsToDownload = datasetToDownload.Count;
             var appSettings = ApplicationService.GetAppSettings();
-            var downloader = new FileDownloader();            
+            long totalSizeUpdatedFiles = 0;
+
+            var downloader = new FileDownloader();
             foreach (var localDataset in datasetToDownload)
             {
+                var fileLog = new DatasetFileLog(localDataset);
+
                 try
                 {
                     Console.WriteLine(localDataset.DatasetId + " - " + localDataset.Title);
@@ -36,7 +55,7 @@ namespace Geonorge.Nedlaster
 
                     DownloadHistory downloadHistory = datasetService.GetFileDownloaHistory(datasetFromFeed.Url);
 
-                    bool newDatasetAvailable = NewDatasetAvailable(downloadHistory, datasetFromFeed);
+                    bool newDatasetAvailable = NewDatasetAvailable(downloadHistory, datasetFromFeed, downloadDirectory);
                     if (newDatasetAvailable)
                         Console.WriteLine("Updated version of dataset is available.");
 
@@ -45,44 +64,43 @@ namespace Geonorge.Nedlaster
                         Console.WriteLine("Starting download process.");
                         downloader.ProgressChanged += (totalFileSize, totalBytesDownloaded, progressPercentage) =>
                         {
+                            fileLog.HumanReadableSize = HumanReadableBytes(totalFileSize.Value);
+                            totalSizeUpdatedFiles += totalFileSize.Value;
                             Console.CursorLeft = 0;
                             Console.Write($"{progressPercentage}% ({HumanReadableBytes(totalBytesDownloaded)}/{HumanReadableBytes(totalFileSize.Value)})                "); // add som extra whitespace to blank out previous updates
                         };
                         var downloadRequest = new DownloadRequest(localDataset.Url, downloadDirectory, localDataset.IsRestricted());
-                        
-                        Task<string> download = downloader.StartDownload(downloadRequest, appSettings);
-                        download.Wait();
-                        string filename = download.Result;
+                        localDataset.FilePath = await downloader.StartDownload(downloadRequest, appSettings);
                         Console.WriteLine();
-                        downloadlog.Add(String.Format("{0};{1};{2}", localDataset.DatasetId, filename, datasetFromFeed.LastUpdated));
-                        updatedDatasetToDownload.Add(datasetFromFeed);
+
+                        downloadLog.Updated.Add(fileLog);
+                        updatedDatasetToDownload.Add(localDataset);
+
                     }
                     else
                     {
+                        fileLog.Message = "Not necessary to download dataset.";
+                        downloadLog.NotUpdated.Add(fileLog);
                         Console.WriteLine("Not necessary to download dataset.");
+                        localDataset.FilePath = downloadHistory.FilePath;
                         updatedDatasetToDownload.Add(localDataset);
                     }
                 }
                 catch (Exception e)
                 {
                     updatedDatasetToDownload.Add(localDataset);
+                    fileLog.Message = "Error while downloading dataset: " + e.Message;
+                    downloadLog.Faild.Add(fileLog);
                     Console.WriteLine("Error while downloading dataset: " + e.Message);
                 }
-                // Write downloadlogfile.
-                System.IO.File.WriteAllLines(ApplicationService.GetDownloadLogfilePath(), downloadlog.ToArray());
                 Console.WriteLine("-------------");
             }
 
+            downloadLog.TotalSizeOfDownloadedFiles = HumanReadableBytes(totalSizeUpdatedFiles);
+            datasetService.WriteToDownloadLogFile(downloadLog);
             datasetService.WriteToDownloadFile(updatedDatasetToDownload);
             datasetService.WriteToDownloadHistoryFile(updatedDatasetToDownload);
-
-            if (!IsRunningAsBackgroundTask(args))
-            {
-                Console.WriteLine("Press any key to exit");
-                Console.ReadKey();
-            }
         }
-
 
         private static string HumanReadableBytes(long bytes)
         {
@@ -113,16 +131,40 @@ namespace Geonorge.Nedlaster
             return downloadDirectory;
         }
 
-        private static bool NewDatasetAvailable(DownloadHistory downloadHistory, DatasetFile datasetFromFeed)
+        private static bool NewDatasetAvailable(DownloadHistory downloadHistory, DatasetFile datasetFromFeed, DirectoryInfo downloadDirectory)
         {
             if (downloadHistory == null) return true;
-            
+            if (!LocalFileExists(downloadHistory, downloadDirectory, datasetFromFeed)) return true;
+
             var originalDatasetLastUpdated = DateTime.Parse(downloadHistory.Downloaded);
             var datasetFromFeedLastUpdated = DateTime.Parse(datasetFromFeed.LastUpdated);
 
             var updatedDatasetAvailable = originalDatasetLastUpdated < datasetFromFeedLastUpdated;
             return updatedDatasetAvailable;
-
         }
+
+        private static bool LocalFileExists(DownloadHistory downloadHistory, DirectoryInfo downloadDirectory, DatasetFile dataset)
+        {
+            if (downloadHistory.FilePath != null)
+            {
+                var filePath = new FileInfo(Path.Combine(downloadDirectory.FullName, downloadHistory.FilePath));
+                return filePath.Exists;
+            }
+            else
+            {
+                return LocalFileExists(downloadDirectory, dataset);
+            }
+        }
+
+        private static bool LocalFileExists(DirectoryInfo downloadDirectory, DatasetFile dataset)
+        {
+            if (!dataset.HasLocalFileName())
+                return false;
+
+            var filePath = new FileInfo(Path.Combine(downloadDirectory.FullName, dataset.LocalFileName()));
+
+            return filePath.Exists;
+        }
+
     }
 }
