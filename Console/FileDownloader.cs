@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Net.Http;
 using System.Text;
@@ -23,8 +23,9 @@ namespace Geonorge.Nedlaster
         
         public async Task<string> StartDownload(DownloadRequest downloadRequest, AppSettings appSettings)
         {
+            string fileName = null;
             SetClientRequestHeaders(downloadRequest, appSettings);
-            string destinationFilePath = String.Empty;
+
             using (var response = await Client.GetAsync(downloadRequest.DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 if (!response.IsSuccessStatusCode)
@@ -36,14 +37,19 @@ namespace Geonorge.Nedlaster
                     using (var contentStream = await response.Content.ReadAsStreamAsync())
                     {
 <<<<<<< HEAD
-                        destinationFilePath = downloadRequest.GetDestinationFileName(response);
+=======
+                        string destinationFilePath = downloadRequest.GetDestinationFilePath(response);
+                        fileName = downloadRequest.GetDestinationFileName(response);
+>>>>>>> upstream/master
                         var totalBytes = response.Content.Headers.ContentLength;
                         await ProcessContentStream(totalBytes, contentStream, destinationFilePath);
                     }
                 }
             }
 <<<<<<< HEAD
-            return destinationFilePath;
+=======
+            return fileName;
+>>>>>>> upstream/master
         }
 
 
