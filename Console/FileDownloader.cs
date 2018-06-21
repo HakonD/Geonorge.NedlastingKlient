@@ -36,20 +36,14 @@ namespace Geonorge.Nedlaster
                 {
                     using (var contentStream = await response.Content.ReadAsStreamAsync())
                     {
-<<<<<<< HEAD
-=======
                         string destinationFilePath = downloadRequest.GetDestinationFilePath(response);
                         fileName = downloadRequest.GetDestinationFileName(response);
->>>>>>> upstream/master
                         var totalBytes = response.Content.Headers.ContentLength;
                         await ProcessContentStream(totalBytes, contentStream, destinationFilePath);
                     }
                 }
             }
-<<<<<<< HEAD
-=======
             return fileName;
->>>>>>> upstream/master
         }
 
 

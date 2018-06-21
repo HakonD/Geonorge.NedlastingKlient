@@ -9,17 +9,27 @@ namespace Geonorge.Nedlaster
 {
     public class Program
     {
+        private static string userpath = String.Empty;
+        private static ApplicationService applicationService = null;
+
         public static void Main(string[] args)
         {
             Console.WriteLine("Geonorge - nedlaster");
             Console.WriteLine("--------------------");
+            if (HasUserDefinedPath(args)) {
+                applicationService = new ApplicationService(userpath);
+                Console.WriteLine("Running with path : " + userpath);
+                Console.WriteLine("App direcctory    : " + applicationService.GetAppDirectory());
+            } else {
+                applicationService = new ApplicationService();
+            }
             DeleteOldLogs();
             StartDownloadAsync().Wait();
         }
 
         private static void DeleteOldLogs()
         {
-            string[] files = Directory.GetFiles(ApplicationService.GetLogAppDirectory().ToString());
+            string[] files = Directory.GetFiles(applicationService.GetLogAppDirectory().ToString());
 
             foreach (string file in files)
             {
@@ -30,14 +40,22 @@ namespace Geonorge.Nedlaster
         }
 
         private static async Task StartDownloadAsync()
-        {
-            var datasetService = new DatasetService();
+        {           
+            DatasetService datasetService;
+            if (userpath.Length > 1)  {
+                datasetService = new DatasetService(userpath);
+            }
+            else
+            {
+                datasetService = new DatasetService();    
+            }
+            
             List<DatasetFile> datasetToDownload = datasetService.GetSelectedFiles();
 
             List<DatasetFile> updatedDatasetToDownload = new List<DatasetFile>();
             DownloadLog downloadLog = new DownloadLog();
             downloadLog.TotalDatasetsToDownload = datasetToDownload.Count;
-            var appSettings = ApplicationService.GetAppSettings();
+            var appSettings = applicationService.GetAppSettings();
             long totalSizeUpdatedFiles = 0;
 
             var downloader = new FileDownloader();
@@ -115,10 +133,12 @@ namespace Geonorge.Nedlaster
             return String.Format("{0:0.##} {1}", len, sizes[order]);
         }
 
-        private static bool IsRunningAsBackgroundTask(string[] args)
+        private static bool HasUserDefinedPath(string[] args)
         {
-            return args != null && args.Any() && args.First() == "-background";
-        }
+            bool _haspath = args != null && args.Any() && args.First() == "-path" && args.Length>1;
+            if (_haspath) userpath = args.ElementAt(1);
+            return _haspath;
+        }        
 
         private static DirectoryInfo GetDownloadDirectory(AppSettings appSettings, DatasetFile dataset)
         {

@@ -32,5 +32,10 @@ namespace Geonorge.Nedlaster
             var filenameFromUrl = new Uri(DownloadUrl).LocalPath;
             return Path.Combine(DestinationDirectory.FullName, Path.GetFileName(filenameFromUrl));
         }
+
+        public string GetDestinationFilePath(HttpResponseMessage response)
+        {
+            return Path.Combine(DestinationDirectory.FullName, GetDestinationFileName(response));
+        }
     }
 }

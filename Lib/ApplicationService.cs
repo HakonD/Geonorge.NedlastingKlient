@@ -13,12 +13,15 @@ namespace Geonorge.MassivNedlasting
     /// </summary>
     public class ApplicationService
     {
+        public ApplicationService() => appDirectoryPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        public ApplicationService(string AppDirectory) => appDirectoryPath = AppDirectory;
+        private static string appDirectoryPath;
 
         /// <summary>
         /// Returns path to the file containing the list of dataset to download.
         /// </summary>
         /// <returns></returns>
-        public static string GetDownloadFilePath()
+        public string GetDownloadFilePath()
         {
             DirectoryInfo appDirectory = GetAppDirectory();
 
@@ -29,7 +32,7 @@ namespace Geonorge.MassivNedlasting
         /// Returns path to the file containing the list of projections in epsg-registry - https://register.geonorge.no/register/epsg-koder
         /// </summary>
         /// <returns></returns>
-        public static string GetProjectionFilePath()
+        public string GetProjectionFilePath()
         {
             DirectoryInfo appDirectory = GetAppDirectory();
 
@@ -40,7 +43,7 @@ namespace Geonorge.MassivNedlasting
         /// Returns path to the file containing the list of downloaded datasets.
         /// </summary>
         /// <returns></returns>
-        public static string GetDownloadHistoryFilePath()
+        public string GetDownloadHistoryFilePath()
         {
             DirectoryInfo appDirectory = GetAppDirectory();
 
@@ -51,15 +54,16 @@ namespace Geonorge.MassivNedlasting
         /// Returns path to the log file containing the list of downloaded datasets.
         /// </summary>
         /// <returns></returns>
-        public static string GetDownloadLogFilePath()
+        public string GetDownloadLogFilePath()
         {
             DirectoryInfo logAppDirectory = GetLogAppDirectory();
-
-            return Path.Combine(logAppDirectory.FullName, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + ".txt");
+            string logpath = Path.Combine(logAppDirectory.FullName, DateTime.Now.ToString("yyyyMMddTHHmmss") + ".txt");
+            Console.WriteLine(logpath);
+            return logpath;
         }
 
 
-        public static string GetUserName()
+        public string GetUserName()
         {
             return GetAppSettings().Username;
         }
@@ -68,11 +72,10 @@ namespace Geonorge.MassivNedlasting
         ///     App directory is located within the users AppData folder
         /// </summary>
         /// <returns></returns>
-        public static DirectoryInfo GetAppDirectory()
+        public DirectoryInfo GetAppDirectory()
         {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-
-            var appDirectory = new DirectoryInfo(appDataPath + Path.DirectorySeparatorChar + "Geonorge"
+            //var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var appDirectory = new DirectoryInfo(appDirectoryPath + Path.DirectorySeparatorChar + "Geonorge"
                                                  + Path.DirectorySeparatorChar + "Nedlasting");
 
             if (!appDirectory.Exists)
@@ -85,9 +88,9 @@ namespace Geonorge.MassivNedlasting
         ///     App directory is located within the users AppData folder
         /// </summary>
         /// <returns></returns>
-        public static DirectoryInfo GetLogAppDirectory()
+        public DirectoryInfo GetLogAppDirectory()
         {
-            var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            //var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
             var appDirectory = new DirectoryInfo(GetAppDirectory().ToString() + Path.DirectorySeparatorChar + "Log");
 
@@ -97,7 +100,7 @@ namespace Geonorge.MassivNedlasting
             return appDirectory;
         }
 
-        public static AppSettings GetAppSettings()
+        public AppSettings GetAppSettings()
         {
             var appSettingsFileInfo = new FileInfo(GetAppSettingsFilePath());
             if (!appSettingsFileInfo.Exists)
@@ -106,7 +109,7 @@ namespace Geonorge.MassivNedlasting
             return JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(GetAppSettingsFilePath()));
         }
 
-        private static string GetDefaultDownloadDirectory()
+        private string GetDefaultDownloadDirectory()
         {
             string myDocuments = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 
@@ -117,7 +120,7 @@ namespace Geonorge.MassivNedlasting
             return downloadDirectory.FullName;
         }
 
-        public static void WriteToAppSettingsFile(AppSettings appSettings)
+        public void WriteToAppSettingsFile(AppSettings appSettings)
         {
             var serializer = new JsonSerializer();
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
@@ -133,19 +136,14 @@ namespace Geonorge.MassivNedlasting
             }
         }
 
-        private static string GetAppSettingsFilePath()
+        private string GetAppSettingsFilePath()
         {
             return Path.Combine(GetAppDirectory().FullName, "settings.json");
         }
 
-        public static string DownloadDirectory()
+        public string DownloadDirectory()
         {
             return GetAppSettings().DownloadDirectory;
-        }
-
-        public static string GetDownloadLogfilePath()
-        {
-            return Path.Combine(DownloadDirectory(), "nedlastinglog.csv");
         }
     }
 }

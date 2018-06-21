@@ -15,7 +15,11 @@ namespace Geonorge.MassivNedlasting
     public class DatasetService
     {
         private static readonly HttpClient HttpClient = new HttpClient();
+        private ApplicationService applicationService;
 
+        public DatasetService() => applicationService = new ApplicationService();
+        public DatasetService(string AppDirectory) => applicationService = new ApplicationService(AppDirectory);
+            
         public List<Dataset> GetDatasets()
         {
             var getFeedTask = HttpClient.GetStringAsync("https://nedlasting.geonorge.no/geonorge/Tjenestefeed_daglig.xml");
@@ -60,7 +64,7 @@ namespace Geonorge.MassivNedlasting
         {
             try
             {
-                using (var r = new StreamReader(ApplicationService.GetProjectionFilePath()))
+                using (var r = new StreamReader(applicationService.GetProjectionFilePath()))
                 {
                     var json = r.ReadToEnd();
                     var selecedFiles = JsonConvert.DeserializeObject<List<Projections>>(json);
@@ -91,7 +95,7 @@ namespace Geonorge.MassivNedlasting
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
             serializer.NullValueHandling = NullValueHandling.Ignore;
 
-            using (var outputFile = new StreamWriter(ApplicationService.GetDownloadFilePath(), false))
+            using (var outputFile = new StreamWriter(applicationService.GetDownloadFilePath(), false))
             using (JsonWriter writer = new JsonTextWriter(outputFile))
             {
                 serializer.Serialize(writer, datasetFiles);
@@ -108,7 +112,7 @@ namespace Geonorge.MassivNedlasting
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
             serializer.NullValueHandling = NullValueHandling.Ignore;
 
-            using (var w = new StreamWriter(ApplicationService.GetDownloadLogFilePath()))
+            using (var w = new StreamWriter(applicationService.GetDownloadLogFilePath()))
             {
                 w.WriteLine("SELECTED FILES: " + downloadLog.TotalDatasetsToDownload);
                 w.WriteLine("-------------------------------");
@@ -152,7 +156,7 @@ namespace Geonorge.MassivNedlasting
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
             serializer.NullValueHandling = NullValueHandling.Ignore;
 
-            using (var outputFile = new StreamWriter(ApplicationService.GetDownloadFilePath(), false))
+            using (var outputFile = new StreamWriter(applicationService.GetDownloadFilePath(), false))
             using (JsonWriter writer = new JsonTextWriter(outputFile))
             {
                 serializer.Serialize(writer, datasetFiles);
@@ -176,7 +180,7 @@ namespace Geonorge.MassivNedlasting
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
             serializer.NullValueHandling = NullValueHandling.Ignore;
 
-            using (var outputFile = new StreamWriter(ApplicationService.GetDownloadHistoryFilePath(), false))
+            using (var outputFile = new StreamWriter(applicationService.GetDownloadHistoryFilePath(), false))
             using (JsonWriter writer = new JsonTextWriter(outputFile))
             {
                 serializer.Serialize(writer, downloadHistory);
@@ -203,7 +207,7 @@ namespace Geonorge.MassivNedlasting
         {
             try
             {
-                using (var r = new StreamReader(ApplicationService.GetDownloadFilePath()))
+                using (var r = new StreamReader(applicationService.GetDownloadFilePath()))
                 {
                     var json = r.ReadToEnd();
                     var selecedFiles = JsonConvert.DeserializeObject<List<DatasetFile>>(json);
@@ -224,7 +228,7 @@ namespace Geonorge.MassivNedlasting
         /// <returns></returns>
         public DownloadHistory GetFileDownloaHistory(string url)
         {
-            var downloadHistoryFilePath = ApplicationService.GetDownloadHistoryFilePath();
+            var downloadHistoryFilePath = applicationService.GetDownloadHistoryFilePath();
             try
             {
                 using (var r = new StreamReader(downloadHistoryFilePath))
@@ -274,7 +278,7 @@ namespace Geonorge.MassivNedlasting
             serializer.Converters.Add(new JavaScriptDateTimeConverter());
             serializer.NullValueHandling = NullValueHandling.Ignore;
 
-            using (var outputFile = new StreamWriter(ApplicationService.GetProjectionFilePath(), false))
+            using (var outputFile = new StreamWriter(applicationService.GetProjectionFilePath(), false))
             using (JsonWriter writer = new JsonTextWriter(outputFile))
             {
                 serializer.Serialize(writer, projections);

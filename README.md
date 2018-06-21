@@ -67,3 +67,17 @@ Build and publish for windows (64-bit)
 Build and publish for windows (64 bit) self contained
 
     dotnet publish -r win-x64 --self-contained
+
+## Console App
+
+Bruk: Geonorge.Nedlaster.exe [-path c:\downloadlocation]
+
+Tilpasset slik at appdata katalogen kan flyttes til annen lokasjon. Sti til rotfolder angis med optional parameter -path
+Uten path vil programmet fortsatt bruke %appdata%
+
+## Build exe for release
+
+```bat
+dotnet build -c release -r win-x64
+dotnet publish -r win-x64 --self-contained -c release -o c:\tools\hnconsole
+```
